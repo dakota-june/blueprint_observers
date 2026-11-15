@@ -3,13 +3,21 @@
 declare(strict_types=1);
 
 use Blueprint\Blueprint;
+use Dakotajune\Blueclues\Snippets\SnippetRegistry;
+use Dakotajune\Blueclues\Tests\Support\AuditSnippet;
+use Dakotajune\Blueclues\Tests\Support\BrokenSnippet;
+
+beforeEach(function () {
+    $registry = app(SnippetRegistry::class);
+    $registry->register(new AuditSnippet());
+    $registry->register(new BrokenSnippet());
+});
 
 function build(string $yaml, array $only = [], array $skip = []): array
 {
     $blueprint = app(Blueprint::class);
-    $tree = $blueprint->analyze($blueprint->parse($yaml));
 
-    return $blueprint->generate($tree, $only, $skip);
+    return $blueprint->generate($blueprint->analyze($blueprint->parse($yaml)), $only, $skip);
 }
 
 const DRAFT = <<<'YAML'
@@ -18,10 +26,12 @@ models:
     title: string
 observers:
   Post:
-    events: [creating, updated]
+    events:
+      creating: [audit]
+      updated:
 YAML;
 
-it('generates the observer and attaches it to an existing model', function () {
+it('creates the observer and attaches it to an existing model', function () {
     $this->writeModel('Post');
 
     $generated = build(DRAFT, only: ['observers']);
@@ -32,19 +42,17 @@ it('generates the observer and attaches it to an existing model', function () {
     $observer = file_get_contents("{$this->project}/app/Observers/PostObserver.php");
     expect($observer)
         ->toContain('class PostObserver implements ShouldHandleEventsAfterCommit')
-        ->toContain('public function creating(Post $post): void')
-        ->toContain('public function updated(Post $post): void')
-        ->not->toContain('public function deleted');
+        ->toContain('@generated blueclues')
+        ->toContain("Log::info('creating'")
+        ->toContain('use Illuminate\\Support\\Facades\\Log;')
+        ->toContain('public function updated(Post $post): void');
 
     expect(file_get_contents("{$this->project}/app/Models/Post.php"))
         ->toContain('#[ObservedBy(PostObserver::class)]')
-        ->toContain('use App\\Observers\\PostObserver;');
-
-    expect(lintPhp("{$this->project}/app/Observers/PostObserver.php"))->toBeTrue()
-        ->and(lintPhp("{$this->project}/app/Models/Post.php"))->toBeTrue();
+        ->and(lintSource($observer))->toBeTrue();
 });
 
-it('does not treat the observers block as models or columns', function () {
+it('keeps the observers block out of models and columns', function () {
     $blueprint = app(Blueprint::class);
     $tree = $blueprint->analyze($blueprint->parse(DRAFT));
 
@@ -55,42 +63,65 @@ it('does not treat the observers block as models or columns', function () {
 it('respects --skip=observers', function () {
     $this->writeModel('Post');
 
-    $generated = build(DRAFT, skip: ['observers']);
+    build(DRAFT, skip: ['observers']);
 
-    expect($generated['created'] ?? [])->not->toContain('app/Observers/PostObserver.php');
     expect(file_exists("{$this->project}/app/Observers/PostObserver.php"))->toBeFalse();
 });
 
-it('is idempotent across rebuilds and keeps tracking the injection', function () {
+it('fails the build, naming the snippet, when a snippet emits invalid PHP', function () {
     $this->writeModel('Post');
 
-    build(DRAFT, only: ['observers']);
-    $afterFirst = file_get_contents("{$this->project}/app/Models/Post.php");
-    $second = build(DRAFT, only: ['observers']);
+    build("observers:\n  Post:\n    events:\n      creating: [broken]\n", only: ['observers']);
+})->throws(\Dakotajune\Blueclues\Snippets\SnippetException::class, '[broken]');
 
-    expect(file_get_contents("{$this->project}/app/Models/Post.php"))->toBe($afterFirst)
-        ->and($second['updated'] ?? [])->toBe([])
-        ->and(file_exists("{$this->project}/.blueclues"))->toBeTrue();
+it('rebuilds without touching developer code and honours the draft', function () {
+    $this->writeModel('Post');
+    build(DRAFT, only: ['observers']);
+
+    $path = "{$this->project}/app/Observers/PostObserver.php";
+    $developer = "    public function saving(Post \$post): void\n    {\n        \$post->touch();\n    }";
+    file_put_contents($path, preg_replace('/\n}\n$/', "\n\n{$developer}\n}\n", file_get_contents($path)));
+
+    $generated = build("observers:\n  Post:\n    events:\n      creating: [audit]\n      deleted:\n", only: ['observers']);
+    $rebuilt = file_get_contents($path);
+
+    expect($generated['created'])->toContain('app/Observers/PostObserver.php')
+        ->and($rebuilt)->toContain($developer)
+        ->not->toContain('function updated')
+        ->toContain('function deleted')
+        ->and(lintSource($rebuilt))->toBeTrue();
 });
 
-it('blueprint:erase removes the observer and reverts the model edit', function () {
+it('blueprint:erase deletes an observer that holds no developer code and reverts the model', function () {
     $this->writeModel('Post');
     $original = file_get_contents("{$this->project}/app/Models/Post.php");
 
     $blueprint = app(Blueprint::class);
-    $generated = build(DRAFT, only: ['observers']);
-    file_put_contents("{$this->project}/.blueprint", $blueprint->dump($generated));
+    file_put_contents("{$this->project}/.blueprint", $blueprint->dump(build(DRAFT, only: ['observers'])));
 
     $this->artisan('blueprint:erase')->assertSuccessful();
 
     expect(file_exists("{$this->project}/app/Observers/PostObserver.php"))->toBeFalse()
         ->and(file_get_contents("{$this->project}/app/Models/Post.php"))->toBe($original)
+        ->and(glob("{$this->project}/.blueprint.bak-*"))->toBe([])
         ->and(file_exists("{$this->project}/.blueclues"))->toBeFalse();
 });
 
-function lintPhp(string $path): bool
-{
-    exec('php -l ' . escapeshellarg($path) . ' 2>&1', $out, $code);
+it('blueprint:erase keeps an observer that contains developer code, backs up .blueprint, strips generated methods', function () {
+    $this->writeModel('Post');
+    $blueprint = app(Blueprint::class);
+    $recorded = $blueprint->dump(build(DRAFT, only: ['observers']));
+    file_put_contents("{$this->project}/.blueprint", $recorded);
 
-    return $code === 0;
-}
+    $path = "{$this->project}/app/Observers/PostObserver.php";
+    $developer = "    public function saving(Post \$post): void\n    {\n        \$post->touch();\n    }";
+    file_put_contents($path, preg_replace('/\n}\n$/', "\n\n{$developer}\n}\n", file_get_contents($path)));
+
+    $this->artisan('blueprint:erase')->assertSuccessful();
+
+    $kept = file_get_contents($path);
+    expect(file_exists($path))->toBeTrue()
+        ->and($kept)->toContain($developer)->not->toContain('@generated')
+        ->and(glob("{$this->project}/.blueprint.bak-*"))->toHaveCount(1)
+        ->and(file_get_contents(glob("{$this->project}/.blueprint.bak-*")[0]))->toBe($recorded);
+});

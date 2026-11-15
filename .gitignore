@@ -7,7 +7,7 @@ composer.lock
 /coverage/
 /build/
 
-# Static analysis / formatting caches (if you add Pint, PHPStan or Rector)
+# Formatting / static analysis caches
 .php-cs-fixer.cache
 .pint.cache
 /.phpstan.cache/

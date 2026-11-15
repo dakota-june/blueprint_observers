@@ -11,7 +11,7 @@ use Blueprint\Contracts\Model as BlueprintModel;
  */
 final class Observer implements BlueprintModel
 {
-    /** @param  array<int, string>  $events */
+    /** @param  array<string, array<int, string>>  $events  event => names of the snippets opted into for it */
     public function __construct(
         private readonly string $name,
         private readonly string $modelName,
@@ -30,10 +30,22 @@ final class Observer implements BlueprintModel
         return $this->modelName;
     }
 
-    /** @return array<int, string> */
+    /** @return array<string, array<int, string>> */
     public function events(): array
     {
         return $this->events;
+    }
+
+    /** @return array<int, string> */
+    public function eventNames(): array
+    {
+        return array_keys($this->events);
+    }
+
+    /** @return array<int, string> */
+    public function snippets(string $event): array
+    {
+        return $this->events[$event] ?? [];
     }
 
     public function afterCommit(): bool

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace {{ namespace }};
 
-{{ imports }}
-
-class {{ class }}{{ implements }}
+class {{ class }}
 {
-{{ methods }}
 }

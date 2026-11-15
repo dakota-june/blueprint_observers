@@ -8,13 +8,13 @@ models:
     amount: decimal:8,2
 
 observers:
-  # Events omitted -> config('blueclues.default_events')
+  # Events omitted -> config('blueclues.default_events'), no snippets
   Invoice: ~
 
   PaymentObserver:
     model: Payment
     afterCommit: true
     events:
-      - creating
-      - updated
-      - deleted
+      creating: [audit]     # opt in to the registered "audit" snippet for this event only
+      updated:              # event with no snippets
+      deleted:
