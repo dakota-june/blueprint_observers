@@ -16,5 +16,5 @@ observers:
     afterCommit: true
     events:
       creating: [audit]     # opt in to the registered "audit" snippet for this event only
-      updated:              # event with no snippets
-      deleted: false
+      updated:              # event with no snippets - should return true by default (configuration option please)
+      deleted:
