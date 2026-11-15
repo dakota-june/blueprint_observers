@@ -1,0 +1,23 @@
+/vendor/
+composer.lock
+
+# Test tooling
+.phpunit.cache/
+.phpunit.result.cache
+/coverage/
+/build/
+
+# Static analysis / formatting caches (if you add Pint, PHPStan or Rector)
+.php-cs-fixer.cache
+.pint.cache
+/.phpstan.cache/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local env
+.env
+.env.*

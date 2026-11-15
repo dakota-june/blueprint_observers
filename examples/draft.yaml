@@ -1,0 +1,20 @@
+models:
+  Invoice:
+    number: string unique
+    status: enum:draft,issued,paid
+    softDeletes
+  Payment:
+    invoice_id: id foreign
+    amount: decimal:8,2
+
+observers:
+  # Events omitted -> config('blueclues.default_events')
+  Invoice: ~
+
+  PaymentObserver:
+    model: Payment
+    afterCommit: true
+    events:
+      - creating
+      - updated
+      - deleted

@@ -1,0 +1,60 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Dakotajune\Blueclues\Tests;
+
+use Blueprint\BlueprintServiceProvider;
+use Dakotajune\Blueclues\BluecluesServiceProvider;
+use Illuminate\Filesystem\Filesystem;
+use Orchestra\Testbench\TestCase as Orchestra;
+
+abstract class TestCase extends Orchestra
+{
+    protected string $project;
+
+    protected function setUp(): void
+    {
+        $this->project = sys_get_temp_dir() . '/blueclues-' . bin2hex(random_bytes(4));
+        (new Filesystem())->ensureDirectoryExists($this->project . '/app/Models');
+
+        parent::setUp();
+
+        $this->app->setBasePath($this->project);
+    }
+
+    protected function tearDown(): void
+    {
+        (new Filesystem())->deleteDirectory($this->project);
+
+        parent::tearDown();
+    }
+
+    protected function getPackageProviders($app): array
+    {
+        return [BlueprintServiceProvider::class, BluecluesServiceProvider::class];
+    }
+
+    protected function defineEnvironment($app): void
+    {
+        $app['config']->set('blueprint.namespace', 'App');
+        $app['config']->set('blueprint.models_namespace', 'Models');
+        $app['config']->set('blueprint.app_path', 'app');
+    }
+
+    protected function writeModel(string $name, string $extra = ''): void
+    {
+        file_put_contents("{$this->project}/app/Models/{$name}.php", <<<PHP
+        <?php
+
+        namespace App\\Models;
+
+        use Illuminate\\Database\\Eloquent\\Model;
+        {$extra}
+        class {$name} extends Model
+        {
+        }
+
+        PHP);
+    }
+}

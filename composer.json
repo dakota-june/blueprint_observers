@@ -1,0 +1,41 @@
+{
+    "name": "dakotajune/blueclues",
+    "description": "First-class Eloquent Observer generation for Laravel Blueprint.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Dakotajune\\Blueclues\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Dakotajune\\Blueclues\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "ext-tokenizer": "*",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "laravel-shift/blueprint": "^2.10"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Dakotajune\\Blueclues\\BluecluesServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
