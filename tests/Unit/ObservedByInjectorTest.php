@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Dakotajune\Blueclues\Support\InjectionResult;
-use Dakotajune\Blueclues\Support\ObservedByInjector;
+use Dakotajune\BlueprintObservers\Support\InjectionResult;
+use Dakotajune\BlueprintObservers\Support\ObservedByInjector;
 
 const OBSERVER = 'App\\Observers\\PostObserver';
 const OBSERVED_BY = 'Illuminate\\Database\\Eloquent\\Attributes\\ObservedBy';

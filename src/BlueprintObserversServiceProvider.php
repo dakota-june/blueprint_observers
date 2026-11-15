@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues;
+namespace Dakotajune\BlueprintObservers;
 
 use Blueprint\Blueprint;
-use Dakotajune\Blueclues\Generators\ObserverGenerator;
-use Dakotajune\Blueclues\Lexers\ObserverLexer;
-use Dakotajune\Blueclues\Listeners\CleanUpOnErase;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
-use Dakotajune\Blueclues\Support\NoticeBag;
+use Dakotajune\BlueprintObservers\Generators\ObserverGenerator;
+use Dakotajune\BlueprintObservers\Lexers\ObserverLexer;
+use Dakotajune\BlueprintObservers\Listeners\CleanUpOnErase;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Support\NoticeBag;
 use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\ServiceProvider;
@@ -21,13 +21,13 @@ use Illuminate\Support\ServiceProvider;
  *
  * Other packages add snippets from their own provider:
  *
- *     $this->app->make(\Dakotajune\Blueclues\Snippets\SnippetRegistry::class)->register(new MySnippet());
+ *     $this->app->make(\Dakotajune\BlueprintObservers\Snippets\SnippetRegistry::class)->register(new MySnippet());
  */
-final class BluecluesServiceProvider extends ServiceProvider
+final class BlueprintObserversServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/blueclues.php', 'blueclues');
+        $this->mergeConfigFrom(__DIR__ . '/../config/blueprint_observers.php', 'blueprint_observers');
 
         $this->app->singleton(SnippetRegistry::class);
         $this->app->singleton(NoticeBag::class);
@@ -57,18 +57,18 @@ final class BluecluesServiceProvider extends ServiceProvider
             }
 
             foreach ($this->app->make(NoticeBag::class)->pull() as $notice) {
-                $event->output->writeln("<comment>blueclues:</comment> {$notice}");
+                $event->output->writeln("<comment>blueprint_observers:</comment> {$notice}");
             }
         });
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../config/blueclues.php' => config_path('blueclues.php'),
-            ], 'blueclues-config');
+                __DIR__ . '/../config/blueprint_observers.php' => config_path('blueprint_observers.php'),
+            ], 'blueprint-observers-config');
 
             $this->publishes([
                 __DIR__ . '/../stubs/observer.stub' => base_path('stubs/blueprint/observer.stub'),
-            ], 'blueclues-stubs');
+            ], 'blueprint-observers-stubs');
         }
     }
 }

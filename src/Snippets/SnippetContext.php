@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Snippets;
+namespace Dakotajune\BlueprintObservers\Snippets;
 
 /**
  * What a snippet may know when it renders. Read-only.

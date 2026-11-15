@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
-use Dakotajune\Blueclues\Support\Concerns\ReadsTokens;
+use Dakotajune\BlueprintObservers\Support\Concerns\ReadsTokens;
 use PhpToken;
 
 /**
  * Edits an observer file in place under one strict rule:
  *
- *   The generator owns exactly the methods tagged `@generated blueclues` and the
+ *   The generator owns exactly the methods tagged `@generated blueprint_observers` and the
  *   `ShouldHandleEventsAfterCommit` entry in the class header. Nothing else is ever modified or removed.
  *
  * On update():
@@ -26,13 +26,13 @@ final class ObserverClassEditor
 {
     use ReadsTokens;
 
-    public const MARKER = '@generated blueclues';
+    public const MARKER = '@generated blueprint_observers';
 
     public const INTERFACE_FQCN = 'Illuminate\\Contracts\\Events\\ShouldHandleEventsAfterCommit';
 
     public const MODEL_PLACEHOLDER = '{{ model }}';
 
-    private const MARKER_PATTERN = '/@generated\s+blueclues\b/';
+    private const MARKER_PATTERN = '/@generated\s+blueprint_observers\b/';
 
     /**
      * @param  array<string, string>  $methods  event => method source from ObserverMethodBuilder (all wanted methods)

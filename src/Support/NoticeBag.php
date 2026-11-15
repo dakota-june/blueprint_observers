@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
 /** Collects human-readable notices during a build / erase so the console can print them afterwards. */
 final class NoticeBag

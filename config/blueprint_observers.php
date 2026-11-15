@@ -27,5 +27,5 @@ return [
     | Records which model files were modified so `blueprint:erase` can undo it.
     | Relative to the project root. Commit it or ignore it, same as `.blueprint`.
     */
-    'manifest' => '.blueclues',
+    'manifest' => '.blueprint_observers',
 ];

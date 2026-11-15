@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Dakotajune\Blueclues\Support\ObserverClassEditor;
-use Dakotajune\Blueclues\Support\ObserverMethodBuilder;
+use Dakotajune\BlueprintObservers\Support\ObserverClassEditor;
+use Dakotajune\BlueprintObservers\Support\ObserverMethodBuilder;
 
 const EDITOR_MODEL = 'App\\Models\\Post';
 
@@ -51,7 +51,7 @@ it('creates a complete observer: imports, header interface, tagged methods', fun
         ->toContain('public function creating(Post $post): void')
         ->toContain('        $post->slug = Str::slug($post->title);');
 
-    expect(substr_count($result->source, '@generated blueclues'))->toBe(2)
+    expect(substr_count($result->source, '@generated blueprint_observers'))->toBe(2)
         ->and(lintSource($result->source))->toBeTrue();
 });
 
@@ -101,7 +101,7 @@ it('deletes only generated methods whose event left the draft, without double bl
 it('treats an untagged method with an event name as the developer\'s and says so', function () {
     $editor = new ObserverClassEditor();
     $built = $editor->update(editorStub(), 'PostObserver', EDITOR_MODEL, true, ['creating' => generatedMethod('creating', '$a = 1;')])->source;
-    $adopted = str_replace(' @generated blueclues Rewritten on every build. Remove this tag to take ownership of the method.', ' mine now', $built);
+    $adopted = str_replace(' @generated blueprint_observers Rewritten on every build. Remove this tag to take ownership of the method.', ' mine now', $built);
 
     $result = $editor->update($adopted, 'PostObserver', EDITOR_MODEL, true, ['creating' => generatedMethod('creating', '$a = 2;')]);
 

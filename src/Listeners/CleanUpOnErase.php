@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Listeners;
+namespace Dakotajune\BlueprintObservers\Listeners;
 
-use Dakotajune\Blueclues\Support\BlueprintFile;
-use Dakotajune\Blueclues\Support\ManifestStore;
-use Dakotajune\Blueclues\Support\NoticeBag;
-use Dakotajune\Blueclues\Support\ObservedByInjector;
-use Dakotajune\Blueclues\Support\ObserverClassEditor;
+use Dakotajune\BlueprintObservers\Support\BlueprintFile;
+use Dakotajune\BlueprintObservers\Support\ManifestStore;
+use Dakotajune\BlueprintObservers\Support\NoticeBag;
+use Dakotajune\BlueprintObservers\Support\ObservedByInjector;
+use Dakotajune\BlueprintObservers\Support\ObserverClassEditor;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Filesystem\Filesystem;
 
@@ -18,7 +18,7 @@ use Illuminate\Filesystem\Filesystem;
  * So, just before it starts, we:
  *
  *  1. strip the #[ObservedBy] attributes (and imports) we added to models;
- *  2. strip the `@generated blueclues` methods from each observer we touched;
+ *  2. strip the `@generated blueprint_observers` methods from each observer we touched;
  *  3. if an observer still holds developer content (or we did not create it), take it off erase's
  *     delete list by editing `.blueprint` (backed up first), so erase leaves it alone.
  *

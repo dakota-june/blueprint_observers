@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Dakotajune\Blueclues\Tests\TestCase;
+use Dakotajune\BlueprintObservers\Tests\TestCase;
 
 uses(TestCase::class)->in('Feature');
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
 final class InjectionResult
 {

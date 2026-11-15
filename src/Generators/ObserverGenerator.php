@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Generators;
+namespace Dakotajune\BlueprintObservers\Generators;
 
 use Blueprint\Blueprint;
 use Blueprint\Contracts\Generator;
 use Blueprint\Tree;
-use Dakotajune\Blueclues\Models\Observer;
-use Dakotajune\Blueclues\Snippets\SnippetContext;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
-use Dakotajune\Blueclues\Snippets\SnippetRenderer;
-use Dakotajune\Blueclues\Support\Manifest;
-use Dakotajune\Blueclues\Support\ManifestStore;
-use Dakotajune\Blueclues\Support\NoticeBag;
-use Dakotajune\Blueclues\Support\ObservedByInjector;
-use Dakotajune\Blueclues\Support\ObserverClassEditor;
-use Dakotajune\Blueclues\Support\ObserverMethodBuilder;
+use Dakotajune\BlueprintObservers\Models\Observer;
+use Dakotajune\BlueprintObservers\Snippets\SnippetContext;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRenderer;
+use Dakotajune\BlueprintObservers\Support\Manifest;
+use Dakotajune\BlueprintObservers\Support\ManifestStore;
+use Dakotajune\BlueprintObservers\Support\NoticeBag;
+use Dakotajune\BlueprintObservers\Support\ObservedByInjector;
+use Dakotajune\BlueprintObservers\Support\ObserverClassEditor;
+use Dakotajune\BlueprintObservers\Support\ObserverMethodBuilder;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 
@@ -77,7 +77,7 @@ final class ObserverGenerator implements Generator
             $output[$created ? 'created' : 'updated'][] = $path;
             $next->recordObserver($path, $observer->name(), $created);
 
-            if (config('blueclues.attach_attribute', true)) {
+            if (config('blueprint_observers.attach_attribute', true)) {
                 $modelPath = $this->attachObservedBy($observer, $modelFqcn, $previous, $next);
 
                 if ($modelPath !== null) {

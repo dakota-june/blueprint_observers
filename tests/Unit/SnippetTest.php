@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-use Dakotajune\Blueclues\Snippets\SnippetContext;
-use Dakotajune\Blueclues\Snippets\SnippetException;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
-use Dakotajune\Blueclues\Snippets\SnippetRenderer;
-use Dakotajune\Blueclues\Tests\Support\AuditSnippet;
-use Dakotajune\Blueclues\Tests\Support\BrokenSnippet;
+use Dakotajune\BlueprintObservers\Snippets\SnippetContext;
+use Dakotajune\BlueprintObservers\Snippets\SnippetException;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRenderer;
+use Dakotajune\BlueprintObservers\Tests\Support\AuditSnippet;
+use Dakotajune\BlueprintObservers\Tests\Support\BrokenSnippet;
 
 function snippetContext(string $event = 'creating'): SnippetContext
 {

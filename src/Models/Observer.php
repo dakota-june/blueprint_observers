@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Models;
+namespace Dakotajune\BlueprintObservers\Models;
 
 use Blueprint\Contracts\Model as BlueprintModel;
 
@@ -56,7 +56,7 @@ final class Observer implements BlueprintModel
     /** Namespace relative to the application root namespace, e.g. "Observers". */
     public function namespace(): string
     {
-        return trim((string) config('blueclues.namespace', 'Observers'), '\\');
+        return trim((string) config('blueprint_observers.namespace', 'Observers'), '\\');
     }
 
     /** e.g. "App\Observers" */

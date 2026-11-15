@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support\Concerns;
+namespace Dakotajune\BlueprintObservers\Support\Concerns;
 
 use PhpToken;
 use RuntimeException;

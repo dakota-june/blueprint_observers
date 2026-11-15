@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
-use Dakotajune\Blueclues\Support\Concerns\ReadsTokens;
+use Dakotajune\BlueprintObservers\Support\Concerns\ReadsTokens;
 use PhpToken;
 use RuntimeException;
 

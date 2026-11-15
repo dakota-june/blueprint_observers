@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Blueprint\Blueprint;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
-use Dakotajune\Blueclues\Tests\Support\AuditSnippet;
-use Dakotajune\Blueclues\Tests\Support\BrokenSnippet;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Tests\Support\AuditSnippet;
+use Dakotajune\BlueprintObservers\Tests\Support\BrokenSnippet;
 
 beforeEach(function () {
     $registry = app(SnippetRegistry::class);
@@ -42,7 +42,7 @@ it('creates the observer and attaches it to an existing model', function () {
     $observer = file_get_contents("{$this->project}/app/Observers/PostObserver.php");
     expect($observer)
         ->toContain('class PostObserver implements ShouldHandleEventsAfterCommit')
-        ->toContain('@generated blueclues')
+        ->toContain('@generated blueprint_observers')
         ->toContain("Log::info('creating'")
         ->toContain('use Illuminate\\Support\\Facades\\Log;')
         ->toContain('public function updated(Post $post): void');
@@ -72,7 +72,7 @@ it('fails the build, naming the snippet, when a snippet emits invalid PHP', func
     $this->writeModel('Post');
 
     build("observers:\n  Post:\n    events:\n      creating: [broken]\n", only: ['observers']);
-})->throws(\Dakotajune\Blueclues\Snippets\SnippetException::class, '[broken]');
+})->throws(\Dakotajune\BlueprintObservers\Snippets\SnippetException::class, '[broken]');
 
 it('rebuilds without touching developer code and honours the draft', function () {
     $this->writeModel('Post');
@@ -104,7 +104,7 @@ it('blueprint:erase deletes an observer that holds no developer code and reverts
     expect(file_exists("{$this->project}/app/Observers/PostObserver.php"))->toBeFalse()
         ->and(file_get_contents("{$this->project}/app/Models/Post.php"))->toBe($original)
         ->and(glob("{$this->project}/.blueprint.bak-*"))->toBe([])
-        ->and(file_exists("{$this->project}/.blueclues"))->toBeFalse();
+        ->and(file_exists("{$this->project}/.blueprint_observers"))->toBeFalse();
 });
 
 it('blueprint:erase keeps an observer that contains developer code, backs up .blueprint, strips generated methods', function () {

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Lexers;
+namespace Dakotajune\BlueprintObservers\Lexers;
 
 use Blueprint\Contracts\Lexer;
-use Dakotajune\Blueclues\Models\Observer;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Models\Observer;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -88,7 +88,7 @@ final class ObserverLexer implements Lexer
     private function events(string $observer, mixed $raw): array
     {
         if ($raw === null || $raw === true || $raw === '' || $raw === []) {
-            return array_fill_keys(array_values((array) config('blueclues.default_events', ['creating', 'updating', 'deleted'])), []);
+            return array_fill_keys(array_values((array) config('blueprint_observers.default_events', ['creating', 'updating', 'deleted'])), []);
         }
 
         $map = [];
@@ -175,10 +175,10 @@ final class ObserverLexer implements Lexer
     private function afterCommit(mixed $raw): bool
     {
         if ($raw === null) {
-            return (bool) config('blueclues.after_commit', true);
+            return (bool) config('blueprint_observers.after_commit', true);
         }
 
         return filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
-            ?? (bool) config('blueclues.after_commit', true);
+            ?? (bool) config('blueprint_observers.after_commit', true);
     }
 }

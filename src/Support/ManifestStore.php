@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
 use Illuminate\Filesystem\Filesystem;
 
-/** Reads / writes the `.blueclues` manifest next to Blueprint's own `.blueprint` file. */
+/** Reads / writes the `.blueprint_observers` manifest next to Blueprint's own `.blueprint` file. */
 final class ManifestStore
 {
     public function __construct(private readonly Filesystem $files) {}
 
     public function path(): string
     {
-        return base_path((string) config('blueclues.manifest', '.blueclues'));
+        return base_path((string) config('blueprint_observers.manifest', '.blueprint_observers'));
     }
 
     public function load(): Manifest

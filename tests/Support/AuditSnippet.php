@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Tests\Support;
+namespace Dakotajune\BlueprintObservers\Tests\Support;
 
-use Dakotajune\Blueclues\Snippets\Snippet;
-use Dakotajune\Blueclues\Snippets\SnippetContext;
-use Dakotajune\Blueclues\Snippets\SnippetOutput;
+use Dakotajune\BlueprintObservers\Snippets\Snippet;
+use Dakotajune\BlueprintObservers\Snippets\SnippetContext;
+use Dakotajune\BlueprintObservers\Snippets\SnippetOutput;
 
 final class AuditSnippet implements Snippet
 {

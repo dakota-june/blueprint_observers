@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Snippets;
+namespace Dakotajune\BlueprintObservers\Snippets;
 
 /**
  * A named, opt-in piece of code contributed to a generated observer method at build time.

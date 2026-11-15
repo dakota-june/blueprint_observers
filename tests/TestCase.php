@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Tests;
+namespace Dakotajune\BlueprintObservers\Tests;
 
 use Blueprint\BlueprintServiceProvider;
-use Dakotajune\Blueclues\BluecluesServiceProvider;
+use Dakotajune\BlueprintObservers\BlueprintObserversServiceProvider;
 use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -18,7 +18,7 @@ abstract class TestCase extends Orchestra
     protected function setUp(): void
     {
         $this->originalCwd = getcwd();
-        $this->project = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'blueclues-' . bin2hex(random_bytes(4));
+        $this->project = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'blueprint_observers-' . bin2hex(random_bytes(4));
         (new Filesystem())->ensureDirectoryExists($this->project . '/app/Models');
 
         parent::setUp();
@@ -34,7 +34,7 @@ abstract class TestCase extends Orchestra
     {
         chdir($this->originalCwd);   // Windows cannot delete the current directory
 
-        if (getenv('BLUECLUES_KEEP') === false) {
+        if (getenv('BLUEPRINT_OBSERVERS_KEEP') === false) {
             (new Filesystem())->deleteDirectory($this->project);
         }
 
@@ -43,7 +43,7 @@ abstract class TestCase extends Orchestra
 
     protected function getPackageProviders($app): array
     {
-        return [BlueprintServiceProvider::class, BluecluesServiceProvider::class];
+        return [BlueprintServiceProvider::class, BlueprintObserversServiceProvider::class];
     }
 
     protected function defineEnvironment($app): void

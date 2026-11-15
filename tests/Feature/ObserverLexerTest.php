@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Dakotajune\Blueclues\Lexers\ObserverLexer;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
-use Dakotajune\Blueclues\Tests\Support\AuditSnippet;
+use Dakotajune\BlueprintObservers\Lexers\ObserverLexer;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Tests\Support\AuditSnippet;
 
 function lexer(): ObserverLexer
 {

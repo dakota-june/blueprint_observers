@@ -8,7 +8,7 @@ models:
     amount: decimal:8,2
 
 observers:
-  # Events omitted -> config('blueclues.default_events'), no snippets
+  # Events omitted -> config('blueprint_observers.default_events'), no snippets
   Invoice: ~
 
   PaymentObserver:

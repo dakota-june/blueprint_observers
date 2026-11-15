@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
-/** Renders one generated observer method, carrying the `@generated blueclues` ownership tag. */
+/** Renders one generated observer method, carrying the `@generated blueprint_observers` ownership tag. */
 final class ObserverMethodBuilder
 {
     /**

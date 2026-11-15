@@ -1,16 +1,16 @@
 {
-    "name": "dakotajune/blueclues",
+    "name": "dakotajune/blueprint_observers",
     "description": "First-class Eloquent Observer generation for Laravel Blueprint.",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Dakotajune\\Blueclues\\": "src/"
+            "Dakotajune\\BlueprintObservers\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Dakotajune\\Blueclues\\Tests\\": "tests/"
+            "Dakotajune\\BlueprintObservers\\Tests\\": "tests/"
         }
     },
     "require": {
@@ -27,7 +27,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Dakotajune\\Blueclues\\BluecluesServiceProvider"
+                "Dakotajune\\BlueprintObservers\\BlueprintObserversServiceProvider"
             ]
         }
     },

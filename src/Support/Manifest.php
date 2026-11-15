@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Dakotajune\Blueclues\Support;
+namespace Dakotajune\BlueprintObservers\Support;
 
 /**
- * Remembers what blueclues did to files it does not wholly own, so `blueprint:erase` can undo it safely.
+ * Remembers what blueprint_observers did to files it does not wholly own, so `blueprint:erase` can undo it safely.
  *
  *  models:    model file => observer FQCN => { model, imports }   #[ObservedBy] edits made to a model
  *  observers: observer file => { class, created }                observer files; `created` = we created the file

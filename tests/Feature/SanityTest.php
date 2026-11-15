@@ -3,9 +3,9 @@
 declare(strict_types=1);
 
 use Blueprint\Blueprint;
-use Dakotajune\Blueclues\Snippets\SnippetRegistry;
-use Dakotajune\Blueclues\Support\NoticeBag;
-use Dakotajune\Blueclues\Tests\Support\AuditSnippet;
+use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Support\NoticeBag;
+use Dakotajune\BlueprintObservers\Tests\Support\AuditSnippet;
 
 /** Writes straight to the terminal (bypasses PHPUnit's output buffering). */
 function say(string $text = ''): void
@@ -67,7 +67,7 @@ it('builds examples/draft.yaml and shows the generated observers', function () {
 
     expect(array_map('basename', $observers))->toBe(['InvoiceObserver.php', 'PaymentObserver.php'])
         ->and(file_get_contents("{$this->project}/app/Observers/PaymentObserver.php"))
-        ->toContain('@generated blueclues')
+        ->toContain('@generated blueprint_observers')
         ->toContain("Log::info('creating'")
         ->and($before)->toBe($after);
 

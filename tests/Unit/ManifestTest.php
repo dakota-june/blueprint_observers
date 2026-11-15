@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Dakotajune\Blueclues\Support\Manifest;
+use Dakotajune\BlueprintObservers\Support\Manifest;
 
 it('round trips models and observers through json', function () {
     $manifest = new Manifest();
