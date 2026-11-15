@@ -17,4 +17,4 @@ observers:
     events:
       creating: [audit]     # opt in to the registered "audit" snippet for this event only
       updated:              # event with no snippets
-      deleted:
+      deleted: false

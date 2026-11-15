@@ -13,19 +13,30 @@ abstract class TestCase extends Orchestra
 {
     protected string $project;
 
+    private string $originalCwd;
+
     protected function setUp(): void
     {
-        $this->project = sys_get_temp_dir() . '/blueclues-' . bin2hex(random_bytes(4));
+        $this->originalCwd = getcwd();
+        $this->project = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'blueclues-' . bin2hex(random_bytes(4));
         (new Filesystem())->ensureDirectoryExists($this->project . '/app/Models');
 
         parent::setUp();
 
         $this->app->setBasePath($this->project);
+
+        // Blueprint's own generators write relative to the working directory, ours to base_path().
+        // In a real app these are the same place; make them the same here so nothing leaks into the package.
+        chdir($this->project);
     }
 
     protected function tearDown(): void
     {
-        (new Filesystem())->deleteDirectory($this->project);
+        chdir($this->originalCwd);   // Windows cannot delete the current directory
+
+        if (getenv('BLUECLUES_KEEP') === false) {
+            (new Filesystem())->deleteDirectory($this->project);
+        }
 
         parent::tearDown();
     }
