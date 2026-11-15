@@ -40,6 +40,21 @@ it('copes with Blueprint stripping list dashes (block lists arrive as one string
     expect($observer->eventNames())->toBe(['creating', 'updated']);
 });
 
+it('treats false as "do not generate this event" and true as "no snippets"', function () {
+    $observer = lexer()->analyze(['observers' => ['Payment' => ['events' => [
+        'creating' => ['audit'],
+        'updated' => null,
+        'saved' => true,
+        'deleted' => false,
+    ]]]])['observers']['PaymentObserver'];
+
+    expect($observer->events())->toBe(['creating' => ['audit'], 'updated' => [], 'saved' => []]);
+});
+
+it('requires snippets to be written inside square brackets', function () {
+    lexer()->analyze(['observers' => ['Post' => ['events' => ['creating' => 'audit']]]]);
+})->throws(InvalidArgumentException::class, 'square brackets');
+
 it('rejects bad drafts with a clear message', function (array $events) {
     lexer()->analyze(['observers' => ['Post' => ['events' => $events]]]);
 })->throws(InvalidArgumentException::class)->with([
@@ -47,6 +62,7 @@ it('rejects bad drafts with a clear message', function (array $events) {
     'unsupported event' => [['deleted' => ['audit']]],
     'duplicate snippet' => [['creating' => ['audit', 'audit']]],
     'unknown event' => [['exploded' => []]],
+    'non-text snippet name' => [['creating' => [['nested']]]],
 ]);
 
 it('rejects observers that normalise to the same name', function () {

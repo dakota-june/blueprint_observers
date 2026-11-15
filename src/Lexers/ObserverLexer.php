@@ -19,14 +19,14 @@ use InvalidArgumentException;
  *       model: Payment            # optional, defaults to the observer name minus "Observer"
  *       afterCommit: true         # optional
  *       events:                   # event => snippets opted into for that event
- *         creating: [audit]
- *         updated:
- *         deleted:
+ *         creating: [audit]       # snippets are ALWAYS written inside [...]
+ *         updated:                # no snippets
+ *         deleted: false          # do not generate this event
  *
  * `events` may also be a flow list ([creating, updated]) or "creating, updated"; omit it for the defaults.
  *
- * Blueprint's parser strips leading list dashes before YAML is read, so a block list can reach us as one
- * whitespace separated string. Every string value is therefore split on commas *and* whitespace.
+ * Snippet lists must use [...]. Blueprint strips leading list dashes before YAML is read, so a block list
+ * would reach us as a bare string; that is rejected with a hint rather than guessed at.
  */
 final class ObserverLexer implements Lexer
 {
@@ -119,10 +119,11 @@ final class ObserverLexer implements Lexer
             }
         }
 
-        return $map;
+        // `event: false` switches an event off; it was only kept in the map to catch duplicates.
+        return array_filter($map, static fn (array|false $snippets): bool => $snippets !== false);
     }
 
-    /** @param  array<string, array<int, string>>  $map */
+    /** @param  array<string, array<int, string>|false>  $map */
     private function addEvent(array &$map, string $observer, string $event, mixed $snippets): void
     {
         $event = trim($event);
@@ -140,14 +141,26 @@ final class ObserverLexer implements Lexer
             throw new InvalidArgumentException("Observer [{$observer}] lists the [{$event}] event more than once.");
         }
 
+        if ($snippets === false) {
+            $map[$event] = false;                       // explicitly switched off
+
+            return;
+        }
+
         $names = match (true) {
-            $snippets === null || $snippets === '' => [],
-            is_string($snippets) => $this->words($snippets),
-            is_array($snippets) => array_values(array_map(static fn (mixed $n): string => trim((string) $n), $snippets)),
-            default => throw new InvalidArgumentException("Observer [{$observer}] event [{$event}] has an unreadable snippet list."),
+            $snippets === null || $snippets === true => [],
+            is_array($snippets) => array_map(static fn (mixed $name): string => is_string($name) ? trim($name) : '', $snippets),
+            default => throw new InvalidArgumentException(
+                "Observer [{$observer}] event [{$event}]: snippets must be written inside square brackets, "
+                . "e.g. {$event}: [audit]. Use `{$event}:` for none or `{$event}: false` to skip the event.",
+            ),
         };
 
-        $names = array_values(array_filter($names, static fn (string $n): bool => $n !== ''));
+        if (in_array('', $names, true)) {
+            throw new InvalidArgumentException("Observer [{$observer}] event [{$event}] has an empty or non-text snippet name.");
+        }
+
+        $names = array_values($names);
 
         foreach ($names as $i => $name) {
             if (! $this->snippets->has($name)) {

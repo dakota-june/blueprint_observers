@@ -21,12 +21,14 @@ observers:
     events:
       creating: [audit]         # opt in to the "audit" snippet for this event only
       updated:                  # event with no snippets
-      deleted:
+      deleted: false            # do not generate this event
 ```
 
-> **Use the map or `[flow, list]` style.** Blueprint strips leading `- ` list dashes from the whole draft
-> before YAML is parsed, so block lists reach blueprint_observers as one whitespace-separated string. blueprint_observers
-> splits strings on commas *and* whitespace, so they still work, but the map style above is unambiguous.
+* **Snippets are always written inside `[...]`.** A bare value (`creating: audit`) is rejected with a hint.
+  This also sidesteps Blueprint stripping leading `- ` list dashes from the draft before YAML is parsed.
+* `event:` or `event: true` generates the event with no snippets; `event: false` switches it off (a previously
+  generated, still-tagged method for it is removed on the next build).
+* `events` may also be a flow list (`[creating, updated]`) or `creating, updated`.
 
 Unknown events, unknown or unsupported snippets, and duplicates fail the build with a clear message.
 
