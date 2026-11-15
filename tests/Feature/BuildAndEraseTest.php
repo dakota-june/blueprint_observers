@@ -99,7 +99,7 @@ it('blueprint:erase deletes an observer that holds no developer code and reverts
     $blueprint = app(Blueprint::class);
     file_put_contents("{$this->project}/.blueprint", $blueprint->dump(build(DRAFT, only: ['observers'])));
 
-    $this->artisan('blueprint:erase')->assertSuccessful();
+    expect($this->eraseLikeTheCli())->toBe(0);
 
     expect(file_exists("{$this->project}/app/Observers/PostObserver.php"))->toBeFalse()
         ->and(file_get_contents("{$this->project}/app/Models/Post.php"))->toBe($original)
@@ -117,7 +117,7 @@ it('blueprint:erase keeps an observer that contains developer code, backs up .bl
     $developer = "    public function saving(Post \$post): void\n    {\n        \$post->touch();\n    }";
     file_put_contents($path, preg_replace('/\n}\n$/', "\n\n{$developer}\n}\n", file_get_contents($path)));
 
-    $this->artisan('blueprint:erase')->assertSuccessful();
+    expect($this->eraseLikeTheCli())->toBe(0);
 
     $kept = file_get_contents($path);
     expect(file_exists($path))->toBeTrue()

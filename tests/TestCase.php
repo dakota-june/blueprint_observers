@@ -19,7 +19,9 @@ abstract class TestCase extends Orchestra
     {
         $this->originalCwd = getcwd();
         $this->project = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'blueprint_observers-' . bin2hex(random_bytes(4));
-        (new Filesystem())->ensureDirectoryExists($this->project . '/app/Models');
+        foreach (['app/Models', 'database/migrations', 'database/factories', 'database/seeders'] as $dir) {
+            (new Filesystem())->ensureDirectoryExists($this->project . '/' . $dir);
+        }
 
         parent::setUp();
 
@@ -51,6 +53,25 @@ abstract class TestCase extends Orchestra
         $app['config']->set('blueprint.namespace', 'App');
         $app['config']->set('blueprint.models_namespace', 'Models');
         $app['config']->set('blueprint.app_path', 'app');
+    }
+
+    /**
+     * Laravel does not re-route Symfony's console events to CommandStarting /
+     * CommandFinished while running unit tests (Kernel::rerouteSymfonyCommandEvents
+     * is skipped), so `$this->artisan()` never triggers our erase hook. A real
+     * `php artisan blueprint:erase` does. This runs erase the way the CLI would.
+     */
+    protected function eraseLikeTheCli(): int
+    {
+        $events = $this->app->make('events');
+        $input = new \Symfony\Component\Console\Input\ArrayInput([]);
+        $output = new \Symfony\Component\Console\Output\NullOutput();
+
+        $events->dispatch(new \Illuminate\Console\Events\CommandStarting('blueprint:erase', $input, $output));
+        $code = $this->artisan('blueprint:erase')->run();
+        $events->dispatch(new \Illuminate\Console\Events\CommandFinished('blueprint:erase', $input, $output, $code));
+
+        return $code;
     }
 
     protected function writeModel(string $name, string $extra = ''): void

@@ -39,9 +39,17 @@ final class BlueprintFile
         $generated = $this->blueprint->parse($contents, false);
 
         $created = $generated['created'] ?? [];
-        $remaining = array_values(array_diff($created, $paths));
 
-        if (! is_array($created) || count($remaining) === count($created)) {
+        if (! is_array($created)) {
+            return null;
+        }
+
+        $remaining = array_values(array_filter(
+            $created,
+            fn (mixed $entry): bool => ! in_array($this->pathOf($entry), $paths, true),
+        ));
+
+        if (count($remaining) === count($created)) {
             return null;
         }
 
@@ -55,6 +63,19 @@ final class BlueprintFile
         $this->files->put($this->path(), $this->blueprint->dump($generated));
 
         return $backup;
+    }
+
+    /**
+     * Blueprint's own generators record some files as [label, path] (e.g. ["Model", "app/Models/Post.php"]),
+     * ours as plain path strings. The path is always the last element.
+     */
+    private function pathOf(mixed $entry): string
+    {
+        if (is_array($entry)) {
+            $entry = end($entry);
+        }
+
+        return is_string($entry) ? $entry : '';
     }
 
     private function backupPath(): string
