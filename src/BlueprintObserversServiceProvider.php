@@ -11,6 +11,7 @@ use Dakotajune\BlueprintObservers\Lexers\NovaObserverLexer;
 use Dakotajune\BlueprintObservers\Lexers\ObserverLexer;
 use Dakotajune\BlueprintObservers\Listeners\CleanUpOnErase;
 use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
+use Dakotajune\BlueprintObservers\Snippets\UniqueSnippet;
 use Dakotajune\BlueprintObservers\Support\NoticeBag;
 use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
@@ -33,6 +34,11 @@ final class BlueprintObserversServiceProvider extends ServiceProvider
 
         $this->app->singleton(SnippetRegistry::class);
         $this->app->singleton(NoticeBag::class);
+
+        // Built-in snippets. Their names are reserved: another package cannot register its own `unique`.
+        $this->app->resolving(SnippetRegistry::class, static function (SnippetRegistry $registry): void {
+            $registry->register(new UniqueSnippet());
+        });
 
         // extend() runs when Blueprint is resolved, whatever order the providers loaded in.
         // Order matters for the generators: a Nova observer may extend a regular one from the same build.

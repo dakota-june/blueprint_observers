@@ -40,6 +40,31 @@ final class NovaObserver implements BlueprintModel
         return $this->observer->modelName();
     }
 
+    public function validation(): ?ValidationSpec
+    {
+        return $this->observer->validation();
+    }
+
+    /**
+     * No: the regular observer already validates every save, Nova's included. A Nova observer validates only
+     * when its own `validation:` key says so (typically stricter, Nova-only rules).
+     */
+    public function inheritsConfigValidation(): bool
+    {
+        return false;
+    }
+
+    /** @return array<string, Guard|null> */
+    public function guards(): array
+    {
+        return $this->observer->guards();
+    }
+
+    public function autoGuards(): bool
+    {
+        return $this->observer->autoGuards();
+    }
+
     /** @return array<string, array<int, string>> */
     public function events(): array
     {

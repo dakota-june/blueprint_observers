@@ -3,13 +3,21 @@ models:
     number: string unique
     status: enum:draft,issued,paid
     softDeletes
+    relationships:
+      hasMany: Payment
   Payment:
     invoice_id: id foreign
     amount: decimal:8,2
 
 observers:
   # Events omitted -> config('blueprint_observers.default_events'), no snippets
-  Invoice: ~
+  Invoice:
+    guards:                 # what to do about relationships when an Invoice is deleted
+      payments: restrict    # block the delete while payments exist (trashed ones count)
+      # payments: nullify   # ... or clear payments.invoice_id instead (it must be nullable)
+      # auto: true          # ... or derive guards from every hasMany / hasOne
+    validation:             # rules come from the columns above (config validation.enabled does this for all)
+      number: [required, string, max:20]
 
   PaymentObserver:
     model: Payment
@@ -30,3 +38,6 @@ nova_observers:
     afterCommit: false
     events:
       updated:
+
+# With blueprint_observers.auto.enabled = true, Invoice above (unique `number`) needs no entry under
+# observers: at all. Its observer is generated with ensureUniqueNumber() and friends.

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Dakotajune\BlueprintObservers\Snippets;
 
+use Dakotajune\BlueprintObservers\Support\UniqueConstraints;
+
 /**
  * What a snippet may know when it renders. Read-only.
  */
@@ -37,6 +39,17 @@ final class SnippetContext
             static fn (object $column): string => $column->name(),
             $this->blueprintModel->columns(),
         ));
+    }
+
+    /**
+     * What must be unique on the observed model: `unique` columns and unique indexes, as lists of column
+     * names (a composite index is one entry). Empty when the model is not in the draft.
+     *
+     * @return array<int, array<int, string>>
+     */
+    public function uniqueConstraints(): array
+    {
+        return $this->blueprintModel === null ? [] : UniqueConstraints::for($this->blueprintModel);
     }
 
     /** The PHP variable the method receives the model in, including the "$", e.g. "$invoice". */

@@ -26,7 +26,7 @@ use InvalidArgumentException;
  */
 final class NovaObserverLexer implements Lexer
 {
-    private const KEYS = ['model', 'afterCommit', 'events', 'extends'];
+    private const KEYS = ['model', 'afterCommit', 'events', 'guards', 'validation', 'extends'];
 
     public function __construct(private readonly ObserverLexer $observers) {}
 

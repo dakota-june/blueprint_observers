@@ -148,6 +148,196 @@ Duplicate names fail. Each snippet's output is syntax-checked on its own, so a b
 build *by name* before anything is written. Snippets contribute method bodies and imports only (no
 constructor dependencies in v1).
 
+## Auto observers: unique enforcement
+
+Turn on `blueprint_observers.auto.enabled` and nobody has to list observers for unique constraints. Every model
+in the draft with a `unique` column (`number: string unique`) or a unique index (`- unique: tenant_id, slug`
+under `indexes:`) gets an observer that runs the built-in `unique` snippet on `creating` and `updating`.
+
+Each constraint lands in its own generated method, like every other generated piece:
+
+```php
+public function creating(Invoice $invoice): void
+{
+    $this->ensureUniqueNumber($invoice);
+    $this->ensureUniqueTenantIdAndSlug($invoice);
+}
+
+protected function ensureUniqueNumber(Invoice $invoice): void { /* ... */ }
+```
+
+Failures throw a `ValidationException` ("The number has already been taken.") keyed on the first column.
+Rows whose unique columns contain `null` are skipped (databases allow many NULLs), and an update that does not
+touch the unique columns runs no query.
+
+Rules:
+
+* Switches are config: `auto.enabled` (default `false`), `auto.unique` and `auto.guards` (both default `true`).
+* An observer you list yourself is never changed and suppresses the auto one for that model. Opt in there with
+  `events: { creating: [unique], updating: [unique] }`.
+* Pivot models are skipped. Auto observers are never after-commit, because the check must run before the write.
+* Helpers are `@generated`: dropping a constraint removes its helper; removing the tag takes the method over.
+* `unique` is a reserved snippet name. It fails loudly on a model with no unique constraint.
+
+Caveats: the database index stays the real guard (the check is not atomic), and the check is bypassed by
+`saveQuietly()`, query-builder writes and `upsert()`. Soft-deleted rows count as taken, as in the index.
+Turning auto off later does not delete observers already generated; `blueprint:erase` does.
+
+## Guards: what an observer does about relationships on delete
+
+A guard decides what happens to related rows when the model is deleted. Three actions:
+
+| action | does |
+| --- | --- |
+| `restrict` | blocks the delete with a `ValidationException` while related rows exist |
+| `cascade` | deletes the related rows (their own model events fire) |
+| `nullify` | sets the related rows' foreign key to `null` |
+
+```yaml
+observers:
+  Invoice:
+    guards:
+      payments: restrict                          # name of the relationship method on the model
+      line_items: { action: cascade, trashed: ignore }
+      notes: nullify
+      comments: false                             # switch off a guard that `auto` would add
+      auto: true                                  # also derive guards from hasMany / hasOne (same as `guards: auto`)
+```
+
+* `guards:` also takes a flow list (`[payments, notes]`) or `auto`. A relationship with no action (`payments:` or
+  `payments: true`) is worked out like an auto guard. Names are camelised (`line_items` is `lineItems`).
+* Guards are written into `deleting`, which is generated even when the draft does not list it. Each relationship
+  gets its own tagged method, `restrictPayments()`, `nullifyNotes()`, `cascadeLineItems()`, called from `deleting` in
+  the order restrict, nullify, cascade, so a refusal always comes before anything is changed. Guards run before any
+  snippets on `deleting`.
+* They work in `nova_observers:` too.
+
+### Auto-derived guards
+
+`auto.guards` (config, on by default, needs `auto.enabled`) gives every model in the draft that has `hasMany` or
+`hasOne` relationships and no listed observer an observer with a guard per relationship. `guards: auto` does the
+same inside an observer you list. The action comes from the child's foreign key, if the draft says one:
+`ondelete:cascade` is `cascade`, `ondelete:null` is `nullify`, `ondelete:restrict` / `no_action` is `restrict`.
+With no `ondelete:` it is `auto.guard_default` (`restrict`). Only `hasMany` and `hasOne` are derived, and only for
+plain references (`Payment`, `Payment:alias`, `Payment.key:alias`). Anything else (morph relations, fully
+qualified names, `belongsToMany`) can be guarded by naming the method. `cascade` and `nullify` refuse a
+relationship the draft shows to be anything but `hasMany` / `hasOne`; `restrict` works on any relationship.
+
+### Trashed rows
+
+If the related model uses soft deletes, trashed rows **count** by default: they block a `restrict`, and `cascade`
+and `nullify` include them (cascade force-deletes them, otherwise the foreign key would still point at the deleted
+row). To ignore them, set `guards.trashed` to `ignore` in config, or per guard with `trashed: ignore`. When the
+related model is not in the draft, the generated code checks for soft deletes at runtime.
+
+### Soft-deleting models
+
+Like a foreign key, a guard acts when the row is really removed. On a model that uses soft deletes it is skipped for
+a soft delete and runs on `forceDelete()`.
+
+### Caveats
+
+* `restrict` is a check, not a lock: the database foreign key stays the real guard. Guards do not run for mass
+  deletes (`Model::query()->delete()`), which fire no model events.
+* `nullify` is a single `UPDATE` on the related rows (no model events on them), and the foreign key column must be
+  nullable.
+* `cascade` loads the related models and deletes them one by one, so their own observers and guards run. For very
+  large relations use the database's `ondelete:cascade` instead.
+* An observer that holds guards (or the `unique` snippet) is never generated as after-commit, whatever
+  `afterCommit` says: the check must run before the write, and after-commit handlers are deferred until the
+  transaction has finished.
+
+## Validation
+
+Observers can validate their model with Laravel's own validator before it is saved. The rules are **derived from
+the columns under `models:`** and can be overridden per observer, in `observers:` and in `nova_observers:`.
+
+Turn it on for every observer (config `validation.enabled`, off by default), or per observer with a `validation:`
+key:
+
+```yaml
+observers:
+  Invoice:
+    validation:
+      number: [required, string, max:20]    # replaces the derived rules of the column
+      notes: [derived, min:3]               # the derived rules, plus these
+      legacy_code: false                    # no validation for this column
+  Payment:
+    validation: true                        # derived rules only, even with validation.enabled off
+  Tag:
+    validation: false                       # never, even with validation.enabled on
+```
+
+Rules are written as a list, or as a `required|string|max:20` string. A rule that contains a comma (`in:a,b`) goes
+in quotes inside a list (`['in:a,b']`) or in the string form; a rule that contains `|` (a regex, say) needs the list.
+
+### What is derived
+
+| column | rules |
+| --- | --- |
+| `nullable` | `nullable` |
+| not nullable, no default | `required` (a default means the database fills it in) |
+| `string`, `char` | `string`, `max:<length>` (255 by default) |
+| `text`, `mediumText`, `tinyText` | `string`, `max:<bytes>` (`longText`: just `string`) |
+| integer types | `integer`, `min`/`max` of the column type (unsigned: `min:0`) |
+| `id`, `foreignId` (not the key) | `integer`, `min:1` |
+| `decimal:8,2` | `numeric`, `decimal:0,2`, `min`/`max` that fit the column |
+| `float`, `double` | `numeric` |
+| `boolean` | `boolean` |
+| `date`, `dateTime`, `timestamp` | `date` |
+| `uuid`, `ulid`, `ipAddress`, `macAddress` | `uuid`, `ulid`, `ip`, `mac_address` |
+| `enum:a,b` | `Rule::in(['a', 'b'])` |
+
+Not validated: the primary key, auto increments, `created_at` / `updated_at` / `deleted_at`. Types with no useful
+rule (json, binary, time, geometry ...) only get `required` / `nullable`. Uniqueness is not validation here: use the
+`unique` snippet or `auto.unique`.
+
+### What gets generated
+
+`saving` calls `$this->validateAttributes($invoice)` first, and two tagged methods hold the rest:
+
+```php
+protected function validationRules(Invoice $invoice): array
+{
+    return [
+        'number' => ['required', 'string', 'max:255'],
+        'status' => ['required', Rule::in(['draft', 'issued', 'paid'])],
+    ];
+}
+
+protected function validateAttributes(Invoice $invoice): void   // Validator::make(...), throws ValidationException
+```
+
+Take over `validationRules()` (remove its tag) to hand-tune the rules; everything else keeps being maintained.
+
+### Nova
+
+Failures are a plain `Illuminate\Validation\ValidationException`, so Nova (and any form request) shows them on the
+fields. To make that work well:
+
+* Errors are keyed by column name (`number`), which is how Nova names its fields. A `*_id` column's errors are
+  **also** keyed by the relationship (`team_id` and `team`), because Nova names a `BelongsTo` field after the
+  relationship.
+* An update validates **only the attributes that changed**. A legacy row with a bad value in a column you are not
+  editing does not block saving another one.
+* A create validates the attributes the model holds, so a column with a database default is not "required".
+* Nova observers (`nova_observers:`) never inherit `validation.enabled`: the regular observer already validates
+  Nova's saves. They validate only with their own `validation:` key, typically for stricter, Nova-only rules.
+  Note that a Nova observer that `extends: ~` the regular one and does not say `validation:` inherits its `saving`
+  handler like any other.
+
+### Auto observers
+
+With `auto.enabled` and `validation.enabled`, models in the draft that have no listed observer get one that only
+validates (`auto.validation`, on by default, can switch that part off). Pivot models are skipped.
+
+### Caveats
+
+* Rules derive from the draft only. A column the draft does not know about is not validated; list it under `validation:`.
+* The raw attribute values are validated (before casts and accessors), which is what the database receives.
+* Validation does not run for `saveQuietly()`, mass updates or query-builder writes.
+* Like every blocking check, an observer with validation is never generated as after-commit.
+
 ## Ownership: what blueprint_observers will and will not touch
 
 Every method blueprint_observers writes carries a docblock tag:
@@ -211,6 +401,13 @@ records its edits in `.blueprint_observers` (latest build only, like `.blueprint
 | `namespace` | `Observers` (relative to `blueprint.namespace`) |
 | `nova_namespace` | `Nova\Observers` (relative to `blueprint.namespace`) |
 | `nova_provider` | `Providers\NovaServiceProvider` (relative to `blueprint.namespace`) |
+| `auto.enabled` | `false` |
+| `auto.unique` | `true` |
+| `auto.guards` | `true` |
+| `auto.guard_default` | `'restrict'` |
+| `auto.validation` | `true` |
+| `validation.enabled` | `false` |
+| `guards.trashed` | `'block'` (or `'ignore'`) |
 | `manifest` | `.blueprint_observers` |
 
 ## Known limits
@@ -220,6 +417,8 @@ records its edits in `.blueprint_observers` (latest build only, like `.blueprint
 * Changing a snippet's output only reaches methods that still carry the `@generated` tag.
 * `extends` on a Nova observer is applied only when its file is created.
 * Only one Nova provider is managed (`nova_provider`).
+* Auto observers are for regular observers only (not `nova_observers`), and only cover models defined in the draft.
+* Guard method names are derived the way Blueprint names `hasMany` / `hasOne` / `belongsToMany` methods; a custom method name Blueprint cannot see has to be written out in `guards:`.
 
 ## Tests
 

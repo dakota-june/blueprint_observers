@@ -8,21 +8,22 @@ use Blueprint\Blueprint;
 use Blueprint\Contracts\Generator;
 use Blueprint\Tree;
 use Dakotajune\BlueprintObservers\Models\Observer;
-use Dakotajune\BlueprintObservers\Snippets\SnippetContext;
 use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
 use Dakotajune\BlueprintObservers\Snippets\SnippetRenderer;
+use Dakotajune\BlueprintObservers\Support\AutoObservers;
 use Dakotajune\BlueprintObservers\Support\Manifest;
 use Dakotajune\BlueprintObservers\Support\ManifestStore;
 use Dakotajune\BlueprintObservers\Support\NoticeBag;
 use Dakotajune\BlueprintObservers\Support\ObservedByInjector;
 use Dakotajune\BlueprintObservers\Support\ObserverClassEditor;
-use Dakotajune\BlueprintObservers\Support\ObserverMethodBuilder;
+use Dakotajune\BlueprintObservers\Support\ObserverMethodFactory;
 use Illuminate\Filesystem\Filesystem;
-use Illuminate\Support\Str;
 
 final class ObserverGenerator implements Generator
 {
-    private readonly SnippetRenderer $renderer;
+    private readonly ObserverMethodFactory $factory;
+
+    private readonly AutoObservers $auto;
 
     private readonly ObserverClassEditor $editor;
 
@@ -40,8 +41,10 @@ final class ObserverGenerator implements Generator
         ?ManifestStore $manifests = null,
         ?ObserverClassEditor $editor = null,
         ?ObservedByInjector $injector = null,
+        ?AutoObservers $auto = null,
     ) {
-        $this->renderer = new SnippetRenderer($registry ?? new SnippetRegistry());
+        $this->factory = new ObserverMethodFactory(new SnippetRenderer($registry ?? new SnippetRegistry()));
+        $this->auto = $auto ?? new AutoObservers();
         $this->notices = $notices ?? new NoticeBag();
         $this->manifests = $manifests ?? new ManifestStore($files);
         $this->editor = $editor ?? new ObserverClassEditor();
@@ -54,7 +57,7 @@ final class ObserverGenerator implements Generator
         $output = ['created' => [], 'updated' => []];
 
         /** @var array<string, Observer> $observers */
-        $observers = $tree->toArray()['observers'] ?? [];
+        $observers = $this->auto->merge($tree, $tree->toArray()['observers'] ?? []);
 
         if ($observers === []) {
             return $output;
@@ -104,13 +107,13 @@ final class ObserverGenerator implements Generator
 
         $source = $existed ? $this->files->get($absolute) : $this->newFile($observer);
 
-        [$methods, $imports] = $this->methods($tree, $observer, $modelFqcn);
+        [$methods, $imports, $blocking] = $this->methods($tree, $observer, $modelFqcn);
 
         $result = $this->editor->update(
             $source,
             $observer->name(),
             $modelFqcn,
-            $observer->afterCommit(),
+            $observer->afterCommit() && ! $blocking,
             $methods,
             $imports,
         );
@@ -129,33 +132,11 @@ final class ObserverGenerator implements Generator
     }
 
     /**
-     * @return array{0: array<string,string>, 1: array<int,string>}  event => method source, extra imports
+     * @return array{0: array<string,string>, 1: array<int,string>, 2: bool}  method name => method source, extra imports, must-run-before-write
      */
     private function methods(Tree $tree, Observer $observer, string $modelFqcn): array
     {
-        $modelClass = class_basename($modelFqcn);
-        $variable = Str::camel($modelClass);
-        $blueprintModel = $tree->modelForContext($observer->modelName());
-
-        $methods = [];
-        $imports = [];
-
-        foreach ($observer->events() as $event => $snippets) {
-            $rendered = $this->renderer->render($snippets, new SnippetContext(
-                observer: $observer->name(),
-                observerFqcn: $observer->fullyQualifiedClassName(),
-                model: $modelClass,
-                modelFqcn: $modelFqcn,
-                variable: $variable,
-                event: $event,
-                blueprintModel: $blueprintModel,
-            ));
-
-            $methods[$event] = ObserverMethodBuilder::build($event, $modelClass, $variable, $rendered['body']);
-            $imports = [...$imports, ...$rendered['imports']];
-        }
-
-        return [$methods, array_values(array_unique($imports))];
+        return $this->factory->build($tree, $observer, $modelFqcn);
     }
 
     private function newFile(Observer $observer): string

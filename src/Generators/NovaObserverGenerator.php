@@ -8,7 +8,6 @@ use Blueprint\Blueprint;
 use Blueprint\Contracts\Generator;
 use Blueprint\Tree;
 use Dakotajune\BlueprintObservers\Models\NovaObserver;
-use Dakotajune\BlueprintObservers\Snippets\SnippetContext;
 use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
 use Dakotajune\BlueprintObservers\Snippets\SnippetRenderer;
 use Dakotajune\BlueprintObservers\Support\Manifest;
@@ -16,9 +15,8 @@ use Dakotajune\BlueprintObservers\Support\ManifestStore;
 use Dakotajune\BlueprintObservers\Support\NoticeBag;
 use Dakotajune\BlueprintObservers\Support\NovaProviderEditor;
 use Dakotajune\BlueprintObservers\Support\ObserverClassEditor;
-use Dakotajune\BlueprintObservers\Support\ObserverMethodBuilder;
+use Dakotajune\BlueprintObservers\Support\ObserverMethodFactory;
 use Illuminate\Filesystem\Filesystem;
-use Illuminate\Support\Str;
 
 /**
  * Generates the observers of the `nova_observers:` block (app/Nova/Observers by default) and registers
@@ -29,7 +27,7 @@ use Illuminate\Support\Str;
  */
 final class NovaObserverGenerator implements Generator
 {
-    private readonly SnippetRenderer $renderer;
+    private readonly ObserverMethodFactory $factory;
 
     private readonly ObserverClassEditor $editor;
 
@@ -47,7 +45,7 @@ final class NovaObserverGenerator implements Generator
         ?ObserverClassEditor $editor = null,
         ?NovaProviderEditor $provider = null,
     ) {
-        $this->renderer = new SnippetRenderer($registry ?? new SnippetRegistry());
+        $this->factory = new ObserverMethodFactory(new SnippetRenderer($registry ?? new SnippetRegistry()));
         $this->notices = $notices ?? new NoticeBag();
         $this->manifests = $manifests ?? new ManifestStore($files);
         $this->editor = $editor ?? new ObserverClassEditor();
@@ -129,13 +127,13 @@ final class NovaObserverGenerator implements Generator
             }
         }
 
-        [$methods, $snippetImports] = $this->methods($tree, $observer, $modelFqcn);
+        [$methods, $snippetImports, $blocking] = $this->methods($tree, $observer, $modelFqcn);
 
         $result = $this->editor->update(
             $source,
             $observer->name(),
             $modelFqcn,
-            $observer->afterCommit(),
+            $observer->afterCommit() && ! $blocking,
             $methods,
             [...$imports, ...$snippetImports],
         );
@@ -154,33 +152,11 @@ final class NovaObserverGenerator implements Generator
     }
 
     /**
-     * @return array{0: array<string,string>, 1: array<int,string>}  event => method source, extra imports
+     * @return array{0: array<string,string>, 1: array<int,string>, 2: bool}  method name => method source, extra imports, must-run-before-write
      */
     private function methods(Tree $tree, NovaObserver $observer, string $modelFqcn): array
     {
-        $modelClass = class_basename($modelFqcn);
-        $variable = Str::camel($modelClass);
-        $blueprintModel = $tree->modelForContext($observer->modelName());
-
-        $methods = [];
-        $imports = [];
-
-        foreach ($observer->events() as $event => $snippets) {
-            $rendered = $this->renderer->render($snippets, new SnippetContext(
-                observer: $observer->name(),
-                observerFqcn: $observer->fullyQualifiedClassName(),
-                model: $modelClass,
-                modelFqcn: $modelFqcn,
-                variable: $variable,
-                event: $event,
-                blueprintModel: $blueprintModel,
-            ));
-
-            $methods[$event] = ObserverMethodBuilder::build($event, $modelClass, $variable, $rendered['body']);
-            $imports = [...$imports, ...$rendered['imports']];
-        }
-
-        return [$methods, array_values(array_unique($imports))];
+        return $this->factory->build($tree, $observer, $modelFqcn);
     }
 
     /**
