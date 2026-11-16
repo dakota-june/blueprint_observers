@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Dakotajune\BlueprintObservers;
 
 use Blueprint\Blueprint;
+use Dakotajune\BlueprintObservers\Generators\NovaObserverGenerator;
 use Dakotajune\BlueprintObservers\Generators\ObserverGenerator;
+use Dakotajune\BlueprintObservers\Lexers\NovaObserverLexer;
 use Dakotajune\BlueprintObservers\Lexers\ObserverLexer;
 use Dakotajune\BlueprintObservers\Listeners\CleanUpOnErase;
 use Dakotajune\BlueprintObservers\Snippets\SnippetRegistry;
@@ -33,9 +35,12 @@ final class BlueprintObserversServiceProvider extends ServiceProvider
         $this->app->singleton(NoticeBag::class);
 
         // extend() runs when Blueprint is resolved, whatever order the providers loaded in.
+        // Order matters for the generators: a Nova observer may extend a regular one from the same build.
         $this->app->extend(Blueprint::class, function (Blueprint $blueprint, $app): Blueprint {
             $blueprint->registerLexer($app->make(ObserverLexer::class));
+            $blueprint->registerLexer($app->make(NovaObserverLexer::class));
             $blueprint->registerGenerator($app->make(ObserverGenerator::class));
+            $blueprint->registerGenerator($app->make(NovaObserverGenerator::class));
 
             return $blueprint;
         });
@@ -68,6 +73,7 @@ final class BlueprintObserversServiceProvider extends ServiceProvider
 
             $this->publishes([
                 __DIR__ . '/../stubs/observer.stub' => base_path('stubs/blueprint/observer.stub'),
+                __DIR__ . '/../stubs/nova_observer.stub' => base_path('stubs/blueprint/nova_observer.stub'),
             ], 'blueprint-observers-stubs');
         }
     }

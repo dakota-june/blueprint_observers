@@ -19,7 +19,7 @@ abstract class TestCase extends Orchestra
     {
         $this->originalCwd = getcwd();
         $this->project = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'blueprint_observers-' . bin2hex(random_bytes(4));
-        foreach (['app/Models', 'database/migrations', 'database/factories', 'database/seeders'] as $dir) {
+        foreach (['app/Models', 'app/Providers', 'database/migrations', 'database/factories', 'database/seeders'] as $dir) {
             (new Filesystem())->ensureDirectoryExists($this->project . '/' . $dir);
         }
 

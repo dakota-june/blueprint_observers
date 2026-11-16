@@ -24,6 +24,18 @@ return [
     'namespace' => 'Observers',
 
     /*
+    | Namespace (relative to blueprint.namespace) of observers generated from the `nova_observers:` block.
+    | These only run for Nova requests: they are registered with Laravel\Nova\Observable, not #[ObservedBy].
+    */
+    'nova_namespace' => 'Nova\Observers',
+
+    /*
+    | The Nova service provider (relative to blueprint.namespace) that gets a generated
+    | `blueprintObservers()` method, called from its boot(). Nothing else in it is ever touched.
+    */
+    'nova_provider' => 'Providers\NovaServiceProvider',
+
+    /*
     | Records which model files were modified so `blueprint:erase` can undo it.
     | Relative to the project root. Commit it or ignore it, same as `.blueprint`.
     */

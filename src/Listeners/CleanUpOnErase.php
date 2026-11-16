@@ -7,6 +7,7 @@ namespace Dakotajune\BlueprintObservers\Listeners;
 use Dakotajune\BlueprintObservers\Support\BlueprintFile;
 use Dakotajune\BlueprintObservers\Support\ManifestStore;
 use Dakotajune\BlueprintObservers\Support\NoticeBag;
+use Dakotajune\BlueprintObservers\Support\NovaProviderEditor;
 use Dakotajune\BlueprintObservers\Support\ObservedByInjector;
 use Dakotajune\BlueprintObservers\Support\ObserverClassEditor;
 use Illuminate\Console\Events\CommandStarting;
@@ -18,8 +19,10 @@ use Illuminate\Filesystem\Filesystem;
  * So, just before it starts, we:
  *
  *  1. strip the #[ObservedBy] attributes (and imports) we added to models;
- *  2. strip the `@generated blueprint_observers` methods from each observer we touched;
- *  3. if an observer still holds developer content (or we did not create it), take it off erase's
+ *  2. strip the generated `blueprintObservers()` method (and its call in boot()) from the Nova provider,
+ *     so it never registers an observer class that erase is about to delete;
+ *  3. strip the `@generated blueprint_observers` methods from each observer we touched;
+ *  4. if an observer still holds developer content (or we did not create it), take it off erase's
  *     delete list by editing `.blueprint` (backed up first), so erase leaves it alone.
  *
  * Observers with nothing left of the developer's are left on the list for erase to delete as normal.
@@ -30,6 +33,7 @@ final class CleanUpOnErase
         private readonly Filesystem $files,
         private readonly ObservedByInjector $injector,
         private readonly ObserverClassEditor $editor,
+        private readonly NovaProviderEditor $nova,
         private readonly ManifestStore $manifests,
         private readonly BlueprintFile $blueprintFile,
         private readonly NoticeBag $notices,
@@ -65,9 +69,25 @@ final class CleanUpOnErase
             }
         }
 
+        foreach ($manifest->providers() as $path => $meta) {
+            $absolute = base_path($path);
+
+            if (! $this->files->exists($absolute)) {
+                continue;
+            }
+
+            $original = $this->files->get($absolute);
+            $stripped = $this->nova->strip($original, $meta['class'], $meta['imports']);
+
+            if ($stripped !== $original) {
+                $this->files->put($absolute, $stripped);
+                $this->notices->add("Removed the generated blueprintObservers() registration from {$path}.");
+            }
+        }
+
         $protect = [];
 
-        foreach ($manifest->observers() as $path => $meta) {
+        foreach (array_merge($manifest->observers(), $manifest->novaObservers()) as $path => $meta) {
             $absolute = base_path($path);
 
             if (! $this->files->exists($absolute)) {

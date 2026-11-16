@@ -18,3 +18,15 @@ observers:
       creating: [audit]     # opt in to the registered "audit" snippet for this event only
       updated:              # event with no snippets
       deleted:
+
+# Observers that only run for Nova requests. They are written to app/Nova/Observers and registered from a
+# generated blueprintObservers() method that NovaServiceProvider::boot() calls.
+nova_observers:
+  Invoice:
+    extends: ~              # extend the regular App\Observers\InvoiceObserver; the default events override
+                            # all three of its handlers, so nothing fires twice during Nova requests
+
+  Payment:
+    afterCommit: false
+    events:
+      updated:

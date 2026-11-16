@@ -61,7 +61,8 @@ final class ObserverGenerator implements Generator
         }
 
         $previous = $this->manifests->load();
-        $next = new Manifest();
+        // The Nova generator shares this manifest; keep what it recorded last time.
+        $next = (new Manifest())->carryNovaFrom($previous);
 
         foreach ($observers as $observer) {
             $path = $this->relativePath($observer->fullyQualifiedClassName());
