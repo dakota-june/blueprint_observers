@@ -36,8 +36,8 @@ it('creates the observer and attaches it to an existing model', function () {
 
     $generated = build(DRAFT, only: ['observers']);
 
-    expect($generated['created'])->toContain('app/Observers/PostObserver.php')
-        ->and($generated['updated'])->toContain('app/Models/Post.php');
+    expect(generatedPaths($generated['created']))->toContain('app/Observers/PostObserver.php')
+        ->and(generatedPaths($generated['updated']))->toContain('app/Models/Post.php');
 
     $observer = file_get_contents("{$this->project}/app/Observers/PostObserver.php");
     expect($observer)
@@ -85,7 +85,7 @@ it('rebuilds without touching developer code and honours the draft', function ()
     $generated = build("observers:\n  Post:\n    events:\n      creating: [audit]\n      deleted:\n", only: ['observers']);
     $rebuilt = file_get_contents($path);
 
-    expect($generated['created'])->toContain('app/Observers/PostObserver.php')
+    expect(generatedPaths($generated['created']))->toContain('app/Observers/PostObserver.php')
         ->and($rebuilt)->toContain($developer)
         ->not->toContain('function updated')
         ->toContain('function deleted')
@@ -97,7 +97,7 @@ it('blueprint:erase deletes an observer that holds no developer code and reverts
     $original = file_get_contents("{$this->project}/app/Models/Post.php");
 
     $blueprint = app(Blueprint::class);
-    file_put_contents("{$this->project}/.blueprint", $blueprint->dump(build(DRAFT, only: ['observers'])));
+    file_put_contents("{$this->project}/.blueprint", $blueprint->dump(recordedLikeBlueprint(build(DRAFT, only: ['observers']))));
 
     expect($this->eraseLikeTheCli())->toBe(0);
 
@@ -110,7 +110,7 @@ it('blueprint:erase deletes an observer that holds no developer code and reverts
 it('blueprint:erase keeps an observer that contains developer code, backs up .blueprint, strips generated methods', function () {
     $this->writeModel('Post');
     $blueprint = app(Blueprint::class);
-    $recorded = $blueprint->dump(build(DRAFT, only: ['observers']));
+    $recorded = $blueprint->dump(recordedLikeBlueprint(build(DRAFT, only: ['observers'])));
     file_put_contents("{$this->project}/.blueprint", $recorded);
 
     $path = "{$this->project}/app/Observers/PostObserver.php";
@@ -124,4 +124,19 @@ it('blueprint:erase keeps an observer that contains developer code, backs up .bl
         ->and($kept)->toContain($developer)->not->toContain('@generated')
         ->and(glob("{$this->project}/.blueprint.bak-*"))->toHaveCount(1)
         ->and(file_get_contents(glob("{$this->project}/.blueprint.bak-*")[0]))->toBe($recorded);
+});
+
+it('reports every generated file as a [label, path] pair, the shape blueprint:build prints and records', function () {
+    $this->writeModel('Post');
+
+    $generated = build(DRAFT, only: ['observers']);
+
+    expect($generated['created'])->toContain(['Observer', 'app/Observers/PostObserver.php'])
+        ->and($generated['updated'])->toContain(['Model', 'app/Models/Post.php']);
+
+    foreach ($generated as $entries) {
+        foreach ($entries as $entry) {
+            expect($entry)->toHaveCount(2)->and($entry[0])->toBeString()->and($entry[1])->toBeString();
+        }
+    }
 });

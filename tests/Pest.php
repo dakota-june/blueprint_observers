@@ -15,3 +15,15 @@ function lintSource(string $source): bool
 
     return $code === 0;
 }
+
+/** Blueprint generators return [label, path] pairs; tests mostly care about the paths. */
+function generatedPaths(array $entries): array
+{
+    return array_map(static fn (array $entry): string => $entry[1], $entries);
+}
+
+/** What Blueprint's builder writes to `.blueprint`: the paths only, grouped by action. */
+function recordedLikeBlueprint(array $generated): array
+{
+    return array_map('generatedPaths', $generated);
+}

@@ -52,7 +52,11 @@ final class NovaObserverGenerator implements Generator
         $this->provider = $provider ?? new NovaProviderEditor();
     }
 
-    /** @return array{created: array<int,string>, updated: array<int,string>} */
+    /**
+     * Blueprint wants every generated item as a [label, path] pair: it prints the label and records the path in .blueprint.
+     *
+     * @return array{created: array<int, array{0: string, 1: string}>, updated: array<int, array{0: string, 1: string}>}
+     */
     public function output(Tree $tree): array
     {
         $output = ['created' => [], 'updated' => []];
@@ -84,7 +88,7 @@ final class NovaObserverGenerator implements Generator
 
             $this->writeObserver($tree, $observer, $path, $modelFqcn, $existed);
 
-            $output[$created ? 'created' : 'updated'][] = $path;
+            $output[$created ? 'created' : 'updated'][] = ['Nova observer', $path];
             $next->recordNovaObserver($path, $observer->name(), $created);
 
             $registrations[] = ['model' => $modelFqcn, 'observer' => $observer->fullyQualifiedClassName()];
@@ -213,7 +217,7 @@ final class NovaObserverGenerator implements Generator
 
     /**
      * @param  array<int, array{model:string, observer:string}>  $registrations
-     * @param  array{created: array<int,string>, updated: array<int,string>}  $output
+     * @param  array{created: array<int, array{0: string, 1: string}>, updated: array<int, array{0: string, 1: string}>}  $output
      */
     private function register(array $registrations, Manifest $previous, Manifest $next, array &$output): void
     {
@@ -238,7 +242,7 @@ final class NovaObserverGenerator implements Generator
 
         if ($result->changed) {
             $this->files->put($absolute, $result->source);
-            $output['updated'][] = $path;
+            $output['updated'][] = ['Nova provider', $path];
         }
 
         // Imports we added on earlier builds stay recorded, so erase can still clean them up.
@@ -246,7 +250,7 @@ final class NovaObserverGenerator implements Generator
         $next->recordProvider($path, $class, $imports);
     }
 
-    /** @param  array{created: array<int,string>, updated: array<int,string>}  $output */
+    /** @param  array{created: array<int, array{0: string, 1: string}>, updated: array<int, array{0: string, 1: string}>}  $output */
     private function unregister(Manifest $previous, array &$output): void
     {
         foreach ($previous->providers() as $path => $meta) {
@@ -261,7 +265,7 @@ final class NovaObserverGenerator implements Generator
 
             if ($stripped !== $original) {
                 $this->files->put($absolute, $stripped);
-                $output['updated'][] = $path;
+                $output['updated'][] = ['Nova provider', $path];
             }
         }
     }

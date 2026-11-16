@@ -51,7 +51,11 @@ final class ObserverGenerator implements Generator
         $this->injector = $injector ?? new ObservedByInjector();
     }
 
-    /** @return array{created: array<int,string>, updated: array<int,string>} */
+    /**
+     * Blueprint wants every generated item as a [label, path] pair: it prints the label and records the path in .blueprint.
+     *
+     * @return array{created: array<int, array{0: string, 1: string}>, updated: array<int, array{0: string, 1: string}>}
+     */
     public function output(Tree $tree): array
     {
         $output = ['created' => [], 'updated' => []];
@@ -78,14 +82,14 @@ final class ObserverGenerator implements Generator
 
             $this->writeObserver($tree, $observer, $path, $modelFqcn, $existed);
 
-            $output[$created ? 'created' : 'updated'][] = $path;
+            $output[$created ? 'created' : 'updated'][] = ['Observer', $path];
             $next->recordObserver($path, $observer->name(), $created);
 
             if (config('blueprint_observers.attach_attribute', true)) {
                 $modelPath = $this->attachObservedBy($observer, $modelFqcn, $previous, $next);
 
                 if ($modelPath !== null) {
-                    $output['updated'][] = $modelPath;
+                    $output['updated'][] = ['Model', $modelPath];
                 }
             }
         }

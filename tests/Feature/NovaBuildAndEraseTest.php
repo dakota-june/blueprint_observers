@@ -56,8 +56,8 @@ it('creates the Nova observer and registers it from blueprintObservers()', funct
 
     $generated = novaBuild(NOVA_DRAFT);
 
-    expect($generated['created'])->toContain(NOVA_OBSERVER)
-        ->and($generated['updated'])->toContain(NOVA_PROVIDER);
+    expect(generatedPaths($generated['created']))->toContain(NOVA_OBSERVER)
+        ->and(generatedPaths($generated['updated']))->toContain(NOVA_PROVIDER);
 
     $observer = file_get_contents("{$this->project}/" . NOVA_OBSERVER);
     $provider = file_get_contents("{$this->project}/" . NOVA_PROVIDER);
@@ -86,8 +86,8 @@ it('rebuilds without changing anything', function () {
     $after = [md5_file("{$this->project}/" . NOVA_OBSERVER), md5_file("{$this->project}/" . NOVA_PROVIDER)];
 
     expect($after)->toBe($before)
-        ->and($second['created'])->toContain(NOVA_OBSERVER)       // still ours, so erase may delete it
-        ->and($second['updated'])->not->toContain(NOVA_PROVIDER);
+        ->and(generatedPaths($second['created']))->toContain(NOVA_OBSERVER)       // still ours, so erase may delete it
+        ->and(generatedPaths($second['updated']))->not->toContain(NOVA_PROVIDER);
 });
 
 it('extends: ~ extends the regular observer of the same name', function () {
@@ -120,7 +120,7 @@ it('still writes the observer, with a notice, when there is no Nova provider', f
 
     $generated = novaBuild(NOVA_DRAFT);
 
-    expect($generated['created'])->toContain(NOVA_OBSERVER)
+    expect(generatedPaths($generated['created']))->toContain(NOVA_OBSERVER)
         ->and(implode("\n", app(NoticeBag::class)->pull()))->toContain('was not found');
 });
 
@@ -141,7 +141,7 @@ it('blueprint:erase deletes the Nova and regular observers and restores the prov
     novaBuild(NOVA_AND_REGULAR_DRAFT);
     $recorded = novaBuild(NOVA_AND_REGULAR_DRAFT);      // a second build must not lose track of anything
 
-    file_put_contents("{$this->project}/.blueprint", app(Blueprint::class)->dump($recorded));
+    file_put_contents("{$this->project}/.blueprint", app(Blueprint::class)->dump(recordedLikeBlueprint($recorded)));
 
     expect($this->eraseLikeTheCli())->toBe(0)
         ->and(file_exists("{$this->project}/" . NOVA_OBSERVER))->toBeFalse()
@@ -153,7 +153,7 @@ it('blueprint:erase deletes the Nova and regular observers and restores the prov
 
 it('blueprint:erase keeps a Nova observer that holds developer code, but no longer registers it', function () {
     $this->writeModel('Post');
-    file_put_contents("{$this->project}/.blueprint", app(Blueprint::class)->dump(novaBuild(NOVA_DRAFT)));
+    file_put_contents("{$this->project}/.blueprint", app(Blueprint::class)->dump(recordedLikeBlueprint(novaBuild(NOVA_DRAFT))));
 
     $path = "{$this->project}/" . NOVA_OBSERVER;
     $developer = "    public function saving(Post \$post): void\n    {\n        \$post->touch();\n    }";
